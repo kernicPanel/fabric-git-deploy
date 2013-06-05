@@ -281,10 +281,12 @@ def updateEnv(branch):
 
                 if sudopull:
                     print sudopull
-                    pull = run("sudo git pull origin " + branch)
+                    #pull = run("sudo git pull origin " + branch)
+                    pull = run("sudo git pull")
                 else:
                     #print("git pull origin " + branch)
                     pull = run("git pull origin " + branch)
+                    #pull = run("git pull")
 
 
                 if pull.failed:
