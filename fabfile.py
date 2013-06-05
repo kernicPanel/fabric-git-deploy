@@ -222,7 +222,7 @@ def updateBranch(branch):
     local("git pull")
     #local("git rebase " + prevBranch)
     if not prevBranch == "production":
-        local("git merge " + prevBranch)
+        local("git merge --no-ff " + prevBranch)
     local("git push origin " + branch)
     updateEnv(branch)
 
