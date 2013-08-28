@@ -6,6 +6,8 @@ from fabric.contrib.console import confirm
 from os import path
 import cmd
 import ConfigParser
+import pprint
+import socket
 
 config = ConfigParser.RawConfigParser()
 config.read('deploy.cfg')
@@ -17,7 +19,7 @@ source = ''
 destination = ''
 environnements = config.sections()
 localModifs = False
-debug = False
+debug = True
 
 class FakeCommand:
     failure = False
@@ -35,16 +37,23 @@ class FakeCommand:
 
 def execLocal(command, capture=False):
     if debug:
-        print "local : " + command
+        #pprint.pprint(env)
+        print env.user + "@" + socket.gethostname() + " " + path.abspath(path.curdir) + " $ " + command
+        #print "local : " + command
         result = FakeCommand()
         return result
     else:
         return local(command, capture)
 
 
-def execRun(command, capture=False):
+def execRun(command, capture=False, expected=False):
     if debug:
-        print "run : " + command
+        print env.user + "@" + env.host_string + " " + env.cwd + " $ " + command
+        #print "run : " + command
+
+        if expected:
+            return expected
+
         result = FakeCommand()
         return result
     else:
@@ -298,8 +307,8 @@ def updateEnv(branch):
         #print vardir
         with cd(url):
             with cd(source):
-                pwd = path.normpath(execRun('pwd', True))
                 confPwd = path.normpath(url + '/' + source)
+                pwd = path.normpath(execRun('pwd', True, confPwd))
                 if not pwd == confPwd:
                     #print pwd
                     #print confPwd
