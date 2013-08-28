@@ -3,7 +3,7 @@
 
 from fabric.api import *
 from fabric.contrib.console import confirm
-from os import path
+import os
 import cmd
 import ConfigParser
 import pprint
@@ -21,10 +21,35 @@ environnements = config.sections()
 localModifs = False
 debug = False
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+
+    def disable(self):
+        self.HEADER = ''
+        self.OKBLUE = ''
+        self.OKGREEN = ''
+        self.WARNING = ''
+        self.FAIL = ''
+        self.ENDC = ''
+
+def printHeader(message):
+    print bcolors.HEADER + message + bcolors.ENDC
+
+def printWarning(message):
+    print bcolors.WARNING + message + bcolors.ENDC
+
+def printError(message):
+    print bcolors.FAIL + message + bcolors.ENDC
+
 def checkLocalEnv():
     """docstring for checkLocalEnv"""
     if env.user == 'wwwmastr':
-        abort("Veuillez utiliser ce script avec votre propre user")
+        abort( bcolors.FAIL + "Veuillez utiliser ce script avec votre propre user" + bcolors.ENDC )
 
 class FakeCommand:
     failure = False
@@ -41,20 +66,23 @@ class FakeCommand:
 
 
 def execLocal(command, capture=False):
-    commandLine = env.user + "@" + socket.gethostname() + " " + path.abspath(path.curdir) + " $ " + command
+    commandLine = bcolors.WARNING + os.getlogin() + "@" + socket.gethostname() + bcolors.OKGREEN + " " + os.path.abspath(os.path.curdir) + " $ " + bcolors.OKBLUE + command + bcolors.ENDC
     if debug:
-        print commandLine
+        if not capture:
+            print commandLine
         result = FakeCommand()
         return result
     else:
-        print "\n" + commandLine
+        if not capture:
+            print "\n" + commandLine
         return local(command, capture)
 
 
 def execRun(command, capture=False, expected=False):
-    commandLine = env.user + "@" + env.host_string + " " + env.cwd + " $ " + command
+    commandLine = bcolors.FAIL + env.user + "@" + env.host_string + bcolors.OKGREEN + " " + env.cwd + " $ " + bcolors.OKBLUE + command + bcolors.ENDC
     if debug:
-        print commandLine
+        if not capture:
+            print commandLine
 
         if expected:
             return expected
@@ -62,7 +90,8 @@ def execRun(command, capture=False, expected=False):
         result = FakeCommand()
         return result
     else:
-        print "\n" + commandLine
+        if not capture:
+            print "\n" + commandLine
         return run(command, capture)
 
 
@@ -95,8 +124,8 @@ def checkModifs():
             global localModifs
             localModifs = True
         else:
-            print("'git stash' a échoué.")
-            print "Veuillez comitter les modifications ou lancer la commande 'git stash' pour les stocker, et 'git stash pop' pour les récupérer apres avoir relancé ce script."
+            printError("'git stash' a échoué.")
+            printWarning("Veuillez comitter les modifications ou lancer la commande 'git stash' pour les stocker, et 'git stash pop' pour les récupérer apres avoir relancé ce script.")
             abort("Sortie du script")
 
 def restoreModifs():
@@ -104,7 +133,7 @@ def restoreModifs():
     if localModifs:
         pop = execLocal("git stash pop")
         if pop.failed:
-            print("La restauration des modifications par 'git stash pop' a échoué ...")
+            printError("La restauration des modifications par 'git stash pop' a échoué ...")
 
 class Source(cmd.Cmd):
     prompt = "Branche source (? for help) --> "
@@ -277,18 +306,18 @@ def updateBranch(branch):
 def cleanError(host, error, envHasModifs = False, command = False):
     """docstring for eanError"""
     print("sur " + host)
-    print("l'erreur suivante est survenue :")
-    print(error)
+    printError("l'erreur suivante est survenue :")
+    printError(error)
     if confirm("Ouvrir un shell sur l'environnement ?"):
-        print("'exit' ou ctrl-d pour revenir au script")
+        printWarning("'exit' ou ctrl-d pour revenir au script")
         if envHasModifs:
-            print "Attention, un 'git stash' a été effectué, et un 'git stash pop' vous sera prorosé avant l'arret du script ou sera effectué automatiquement si vous décidez de reprendre l'éxécution normale"
+            printWarning("Attention, un 'git stash' a été effectué, et un 'git stash pop' vous sera prorosé avant l'arret du script ou sera effectué automatiquement si vous décidez de reprendre l'éxécution normale")
         open_shell(command)
     if not confirm("Poursuivre l'exécution du script ?"):
         if envHasModifs and confirm("Des modifications ont étées sauvegardée par un 'git stash'. Voulez-vous les restaurer par un 'git stash pop' ?"):
             pop = execRun("git stash pop")
             if not pop.failed:
-                print "Modifications restaurées"
+                printWarning("Modifications restaurées")
 
         abort("Script interronpu par l'utilisateur")
     pass
@@ -313,8 +342,8 @@ def updateEnv(branch):
         #print vardir
         with cd(url):
             with cd(source):
-                confPwd = path.normpath(url + '/' + source)
-                pwd = path.normpath(execRun('pwd', True, confPwd))
+                confPwd = os.path.normpath(url + '/' + source)
+                pwd = os.path.normpath(execRun('pwd', True, confPwd))
                 if not pwd == confPwd:
                     #print pwd
                     #print confPwd
@@ -357,7 +386,7 @@ def deploy():
     #hasModifs()
     checkLocalEnv()
     checkModifs()
-    print("deploy start")
+    printHeader("\ndeploy start")
     getCurrentBranch()
     #commit()
     retrieveBranches()
