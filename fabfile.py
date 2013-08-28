@@ -19,7 +19,12 @@ source = ''
 destination = ''
 environnements = config.sections()
 localModifs = False
-debug = True
+debug = False
+
+def checkLocalEnv():
+    """docstring for checkLocalEnv"""
+    if env.user == 'wwwmastr':
+        abort("Veuillez utiliser ce script avec votre propre user")
 
 class FakeCommand:
     failure = False
@@ -349,6 +354,7 @@ def restoreCurrentBranch():
 def deploy():
     """main deploy tool"""
     #hasModifs()
+    checkLocalEnv()
     checkModifs()
     print("deploy start")
     getCurrentBranch()
