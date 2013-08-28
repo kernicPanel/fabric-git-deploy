@@ -17,15 +17,48 @@ source = ''
 destination = ''
 environnements = config.sections()
 localModifs = False
+debug = False
+
+class FakeCommand:
+    failure = False
+    failed = False
+
+    def splitlines(self):
+        return ['line 1', 'line 2']
+
+    def split(self, arg):
+        return '* develop'
+
+    def startswith(self, arg):
+        return ''
+
+
+def execLocal(command, capture=False):
+    if debug:
+        print "local : " + command
+        result = FakeCommand()
+        return result
+    else:
+        return local(command, capture)
+
+
+def execRun(command, capture=False):
+    if debug:
+        print "run : " + command
+        result = FakeCommand()
+        return result
+    else:
+        return run(command, capture)
+
 
 def hasModifs( remote = False):
     """docstring for hasModifs"""
     if not remote:
-        #gsp = local("git status --porcelain")
-        gsp = local("git status", True)
+        #gsp = execLocal("git status --porcelain")
+        gsp = execLocal("git status", True)
     else:
-        #gsp = run("git status --porcelain")
-        gsp = run("git status", True)
+        #gsp = execRun("git status --porcelain")
+        gsp = execRun("git status", True)
     gspArr = gsp.splitlines()
     for line in gspArr:
         #print line
@@ -42,7 +75,7 @@ def hasModifs( remote = False):
 def checkModifs():
     """docstring for checkModifs"""
     if hasModifs() and confirm("Des modifications existent: Voulez-vous les stocker par un 'git stash' ?"):
-        stash = local("git stash")
+        stash = execLocal("git stash")
         if not stash.failed:
             global localModifs
             localModifs = True
@@ -54,7 +87,7 @@ def checkModifs():
 def restoreModifs():
     """docstring for restoreModifs"""
     if localModifs:
-        pop = local("git stash pop")
+        pop = execLocal("git stash pop")
         if pop.failed:
             print("La restauration des modifications par 'git stash pop' a échoué ...")
 
@@ -160,7 +193,7 @@ def test():
 
 def getCurrentBranch():
     """Retrieve current branch name"""
-    branches = local("git branch", True)
+    branches = execLocal("git branch", True)
     global currentBranch
     currentBranch = branches.split('* ')[1].split('\n')[0]
     print("current branch : " + currentBranch)
@@ -172,7 +205,7 @@ def checkBranch(branch):
 
 def retrieveBranches():
     """init : Retrieve local branches"""
-    names = local("git branch", True).split('\n')
+    names = execLocal("git branch", True).split('\n')
     global localBranches
     for branchName in names:
         localBranches.append(branchName.strip(' *'))
@@ -180,7 +213,7 @@ def retrieveBranches():
 #def checkBranches():
     #"""Check if process branches exists"""
     #global localBranches
-    #localBranches = local("git branch", True).split('\n')
+    #localBranches = execLocal("git branch", True).split('\n')
     ##print("local branches : ")
     #for branch in localBranches:
         #print(branch)
@@ -191,7 +224,7 @@ def retrieveBranches():
 def createLocalBranch(branch):
     """docstring for createLocalBranch"""
     #print("git branch " + branch + " origin/" + branch)
-    local("git branch " + branch + " origin/" + branch)
+    execLocal("git branch " + branch + " origin/" + branch)
 
 def pushTobranch():
     """docstring for pushTobranch"""
@@ -217,13 +250,13 @@ def updateBranch(branch):
         #print("git merge " + prevBranch)
     #print("git push origin " + branch)
 
-    local("git checkout " + branch)
-    #local("git pull origin " + branch)
-    local("git pull")
-    #local("git rebase " + prevBranch)
+    execLocal("git checkout " + branch)
+    #execLocal("git pull origin " + branch)
+    execLocal("git pull")
+    #execLocal("git rebase " + prevBranch)
     if not prevBranch == "production":
-        local("git merge --no-ff " + prevBranch)
-    local("git push origin " + branch)
+        execLocal("git merge --no-ff " + prevBranch)
+    execLocal("git push origin " + branch)
     updateEnv(branch)
 
 def cleanError(host, error, envHasModifs = False, command = False):
@@ -238,7 +271,7 @@ def cleanError(host, error, envHasModifs = False, command = False):
         open_shell(command)
     if not confirm("Poursuivre l'exécution du script ?"):
         if envHasModifs and confirm("Des modifications ont étées sauvegardée par un 'git stash'. Voulez-vous les restaurer par un 'git stash pop' ?"):
-            pop = run("git stash pop")
+            pop = execRun("git stash pop")
             if not pop.failed:
                 print "Modifications restaurées"
 
@@ -265,7 +298,7 @@ def updateEnv(branch):
         #print vardir
         with cd(url):
             with cd(source):
-                pwd = path.normpath(run('pwd', True))
+                pwd = path.normpath(execRun('pwd', True))
                 confPwd = path.normpath(url + '/' + source)
                 if not pwd == confPwd:
                     #print pwd
@@ -276,33 +309,33 @@ def updateEnv(branch):
 
                 if hasModifs( True ):
                     envHasModifs = True
-                    run("git stash")
+                    execRun("git stash")
 
 
                 if sudopull:
                     print sudopull
-                    #pull = run("sudo git pull origin " + branch)
-                    pull = run("sudo git pull")
+                    #pull = execRun("sudo git pull origin " + branch)
+                    pull = execRun("sudo git pull")
                 else:
                     #print("git pull origin " + branch)
-                    pull = run("git pull origin " + branch)
-                    #pull = run("git pull")
+                    pull = execRun("git pull origin " + branch)
+                    #pull = execRun("git pull")
 
 
                 if pull.failed:
                     cleanError(env.host_string, pull, envHasModifs, "cd " + confPwd)
                 if envHasModifs:
-                    run("git stash pop")
+                    execRun("git stash pop")
 
-            pwd = run('pwd', True)
+            pwd = execRun('pwd', True)
             #print("rm -fr var/cache/* " + "var/" + vardir + "/cache/*")
-            rm  = run("rm -fr var/cache/* " + "var/" + vardir + "/cache/*")
+            rm  = execRun("rm -fr var/cache/* " + "var/" + vardir + "/cache/*")
             if rm.failed:
                 cleanError(env.host_string, rm, envHasModifs, "cd " + url)
 
 def restoreCurrentBranch():
     """docstring for restoreCurrentBranch"""
-    local("git checkout " + currentBranch)
+    execLocal("git checkout " + currentBranch)
 
 def deploy():
     """main deploy tool"""
