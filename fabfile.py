@@ -41,20 +41,20 @@ class FakeCommand:
 
 
 def execLocal(command, capture=False):
+    commandLine = env.user + "@" + socket.gethostname() + " " + path.abspath(path.curdir) + " $ " + command
     if debug:
-        #pprint.pprint(env)
-        print env.user + "@" + socket.gethostname() + " " + path.abspath(path.curdir) + " $ " + command
-        #print "local : " + command
+        print commandLine
         result = FakeCommand()
         return result
     else:
+        print "\n" + commandLine
         return local(command, capture)
 
 
 def execRun(command, capture=False, expected=False):
+    commandLine = env.user + "@" + env.host_string + " " + env.cwd + " $ " + command
     if debug:
-        print env.user + "@" + env.host_string + " " + env.cwd + " $ " + command
-        #print "run : " + command
+        print commandLine
 
         if expected:
             return expected
@@ -62,6 +62,7 @@ def execRun(command, capture=False, expected=False):
         result = FakeCommand()
         return result
     else:
+        print "\n" + commandLine
         return run(command, capture)
 
 
